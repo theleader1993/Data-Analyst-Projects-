@@ -1,0 +1,38 @@
+/* 16: Chuỗi bất bại dài nhất */
+use football;
+with tbl_value as
+	(select a.club_name, a.index_time,
+		   ifnull(lag(a.index_time) over  (partition by a.club_name),a.index_time) as previous_value,
+           ifnull(lead(a.index_time) over (partition by a.club_name),a.index_time) as next_value
+    from
+	(select s.club_name, m1.*,
+		   dense_rank() over (partition by s.club_name order by m1.date) as index_time
+	from (select distinct home as club_name from matches ) as s
+	join matches as m1
+	on s.club_name = m1.home or s.club_name = m1.away) as a
+    where a.homegoals = a.awaygoals or
+		  (a.club_name = a.home and a.homegoals > a.awaygoals) or
+          (a.club_name = a.away and a.awaygoals > a.homegoals))  
+/*  --------------- Hết bảng tạm -------------------------------------------*/
+
+select t4.club_name , (t4.end_time - t4.start_time + 1 ) as num_match_not_lose
+from 
+	(select t3.club_name,
+			MAX(case when t3.status_time = 'start' then t3.index_time end) as start_time,
+			MAX(case when t3.status_time = 'end' then t3.index_time end) as end_time
+	from 
+		(select t2.club_name, t2.index_time, t2.status_time,
+			   dense_rank() over (partition by t2.club_name, t2.status_time order by t2.index_time) as ranking
+		from 
+			(select t1.*,
+					(case when t1.index_time = t1.previous_value and t1.next_value - t1.index_time = 1 then 'start'
+						  when t1.next_value - t1.index_time = 1 and t1.index_time - t1.previous_value > 1 then 'start'
+						  when t1.index_time = t1.next_value and t1.index_time - t1.previous_value = 1 then 'end'
+						  when t1.index_time - t1.previous_value = 1 and t1.next_value - t1.index_time > 1 then 'end' end) as status_time
+			from tbl_value as t1) as t2
+		where t2.status_time is not null) as t3 
+	group by t3.club_name, t3.ranking) as t4
+order by num_match_not_lose desc
+
+-- KẾT LUẬN: Chuỗi bất bại dài nhất trong lịch sử giải NHA (thắng hoặc hòa) là 49 trận  của Arsenal 
+-- Đứng sau là chuỗi 44 của Liverpool, 40 của Chelsea, 30 của Man city

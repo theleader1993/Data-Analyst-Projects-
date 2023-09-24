@@ -1,0 +1,32 @@
+/* Chuỗi thắng liên tiếp dài nhất trong một mùa */  
+use football;
+with tbl_week_win as
+	(select s.club_name, m1.season_end_year, m1.wk as week_win
+	from (select distinct home as club_name from matches) as s
+	join matches as m1
+	on (s.club_name = m1.home and m1.homegoals > m1.awaygoals) or (s.club_name = m1.away and m1.awaygoals > m1.homegoals))
+
+
+select s.season_end_year, s.club_name, s.start_week, MIN(e.end_week) as end_week,
+		(min(e.end_week) - s.start_week + 1 ) as num_week_consecutive
+from 
+	(select t1.season_end_year, t1.club_name, t1.week_win as start_week
+	from tbl_week_win as t1
+	left join tbl_week_win as t2
+	on t1.season_end_year = t2.season_end_year and t1.club_name = t2.club_name and t2.week_win = t1.week_win - 1 
+	left join tbl_week_win as t3
+	on t1.season_end_year = t3.season_end_year and t1.club_name = t3.club_name and t3.week_win = t1.week_win + 1 
+	where t2.week_win is null and t3.week_win is not null) as s
+join
+	(select t1.season_end_year, t1.club_name, t1.week_win as end_week
+	from tbl_week_win as t1
+	left join tbl_week_win as t2
+	on t1.season_end_year = t2.season_end_year and t1.club_name = t2.club_name and t2.week_win = t1.week_win - 1 
+	left join tbl_week_win as t3
+	on t1.season_end_year = t3.season_end_year and t1.club_name = t3.club_name and t3.week_win = t1.week_win + 1 
+	where t2.week_win is not null and t3.week_win is  null) as e
+on s.season_end_year = e.season_end_year and s.club_name = e.club_name and s.start_week < e.end_week
+group by s.season_end_year, s.club_name, s.start_week
+order by num_week_consecutive desc
+
+-- KẾT LUẬN: chuỗi thắng liên tiếp dài nhất trong một mùa  = 18 , 2 đội đạt được là Liverpool (mùa 2019/2020) và Man city (mùa 2017/2018) 

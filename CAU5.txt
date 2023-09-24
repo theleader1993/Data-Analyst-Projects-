@@ -1,0 +1,42 @@
+/*  5: Giành chức vô địch khi còn nhiều vòng đấu nhất */
+-- trong một mùa tại mỗi vòng đấu phải xác định được tổng số điểm hiện tại của đội đầu bảng và đội cuối bảng
+-- số đội ở mỗi mùa giải có sự thay đổi : 1993 -> 1995 : 22 đội. Còn lại là 20 đội
+-- select season_end_year, count(distinct home) as num_club 
+-- from matches 
+-- group by season_end_year
+
+use football;
+select a3.season_end_year, min(a3.wk) as week_champion_early,
+	   (case when a3.season_end_year <= 1995 then 42 - min(a3.wk)
+			    when a3.season_end_year > 1995 then 38 - min(a3.wk) end ) as num_week_champion_early		
+from  
+	(select a2.season_end_year, a2.wk, MAX(a2.max_point_remaining) as max_point_remaining,
+		   sum(case when a2.xep_hang_by_week = 1 then a2.total_score
+					when a2.xep_hang_by_week = 2 then a2.total_score * (-1) end ) as diff_score_rank1_2
+	from 
+		(select a1.*, 
+			  (case when a1.season_end_year between 1993 and 1995 then (42 - a1.wk)*3 else (38 -a1.wk)*3 end) as max_point_remaining,
+			  dense_rank() over(partition by a1.season_end_year, a1.wk order by a1.total_score desc, a1.total_hieu_so desc, a1.club_name) as xep_hang_by_week
+		from 
+			(select a.*, 
+					sum(a.current_score) over (partition by a.season_end_year, n.club_name order by m1.wk) as total_score,
+					sum(a.curent_hieu_so) over (partition by a.season_end_year, n.club_name order by m1.wk) as total_hieu_so
+			from
+				(select m1.season_end_year, m1.wk, n.club_name,
+						(case when n.club_name = m1.home and m1.homegoals > m1.awaygoals then 3 
+							  when n.club_name = m1.home and m1.homegoals < m1.awaygoals then 0
+							  when n.club_name = m1.away and m1.homegoals > m1.awaygoals then 0
+							  when n.club_name = m1.away and m1.homegoals < m1.awaygoals then 3
+						else 1 end) as current_score,
+						(case when n.club_name = m1.home then m1.homegoals - m1.awaygoals
+							  when n.club_name = m1.away then m1.awaygoals - m1.homegoals end) as curent_hieu_so
+				from ( select distinct home as club_name from matches ) as n
+				join matches as m1
+				on n.club_name = m1.home or n.club_name = m1.away) as a) as a1) as a2
+	where a2.xep_hang_by_week <= 2 and a2.wk > 19
+	group by a2.season_end_year, a2.wk)  as a3 
+where a3.diff_score_rank1_2 > a3.max_point_remaining
+group by a3.season_end_year
+order by num_week_champion_early desc
+
+

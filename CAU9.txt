@@ -1,0 +1,34 @@
+/* 9: Thắng nhiều trận/ít trận sân khách nhất trong một mùa */
+use football;
+select a1.season_end_year, a1.club_name, a1.num_win_away_season
+from 
+	(select a.*, dense_rank() over (order by num_win_away_season desc ) as xep_hang
+	from
+		(select g.season_end_year, g.club_name, ifnull(count(m1.away), 0) as num_win_away_season
+		from 
+			(select m.season_end_year, m.home as club_name
+			from matches as m
+			group by m.season_end_year, m.home) as g
+		left join matches as m1
+		on g.season_end_year = m1.season_end_year and g.club_name = m1.away and m1.awaygoals > m1.homegoals
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+union all
+
+select a1.season_end_year, a1.club_name, a1.num_win_away_season
+from 
+	(select a.*, dense_rank() over (order by num_win_away_season asc ) as xep_hang
+	from
+		(select g.season_end_year, g.club_name, ifnull(count(m1.away), 0) as num_win_away_season
+		from 
+			(select m.season_end_year, m.home as club_name
+			from matches as m
+			group by m.season_end_year, m.home) as g
+		left join matches as m1
+		on g.season_end_year = m1.season_end_year and g.club_name = m1.away and m1.awaygoals > m1.homegoals
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+-- KẾT LUẬN: thắng nhiều trận trên sân khách nhất = 16, tạo bởi Man city
+-- Thắng ít trận trên sân khách nhất = 0, tạo bởi Leed United, Coventry city, Wolves, Norwich City, Derby County, Hull City

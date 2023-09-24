@@ -1,0 +1,37 @@
+/* 19: Chuỗi thua liên tiếp nhiều nhất một mùa */
+select a4.season_end_year, a4.club_name ,
+		(a4.end_wk - a4.start_wk + 1)  as num_lose_consecutive_inseason
+from 
+	(select a3.season_end_year, a3.club_name, a3.ranking, 
+			MAX(case when a3.status_wk = 'start' then a3.wk end) as start_wk,
+			MAX(case when a3.status_wk = 'end' then a3.wk end) as end_wk
+	from 
+		(select a2.Season_End_Year, a2.club_name, a2.status_wk, a2.wk,
+			   dense_rank() over (partition by a2.Season_End_Year, a2.club_name, a2.status_wk order by a2.wk) as ranking
+		from 
+			(select a1.*,
+					(case when a1.wk = a1.previous_wk and a1.next_wk -  a1.wk = 1 then 'start'
+						  when a1.wk - a1.previous_wk > 1 and a1.next_wk -  a1.wk = 1 then 'start'
+						  when a1.wk = a1.next_wk and a1.wk - a1.previous_wk = 1 then 'end'
+						  when a1.next_wk - a1.wk > 1 and a1.wk - a1.previous_wk = 1 then 'end' end) as status_wk
+			from 
+				(select a.club_name, a.season_end_year, a.wk,
+						ifnull(lag(a.wk) over (partition by a.Season_End_Year, a.club_name order by a.wk), a.wk) as previous_wk ,
+						ifnull(lead(a.wk) over (partition by a.Season_End_Year, a.club_name order by a.wk), a.wk) as next_wk 
+				from 
+					(select g.club_name, m1.season_end_year, m1.wk
+					from 
+						(select m1.season_end_year, m1.home as club_name
+						from matches as m1
+						group by m1.season_end_year, m1.home) as g
+					join matches as m1
+					on g.season_end_year = m1.season_end_year and
+					((g.club_name = m1.home and m1.homegoals < m1.awaygoals) or (g.club_name = m1.away and m1.awaygoals < m1.homegoals) )
+                    ) as a) as a1) as a2
+		where a2.status_wk is not null) as a3
+	group by a3.season_end_year, a3.club_name, a3.ranking) as a4
+order by num_lose_consecutive_inseason desc
+-- KẾT LUẬN: Chuỗi thua liên tiếp nhiều nhất một mùa là = 15  bởi Sunderland
+-- wikipedia VN để là 20 là hoàn toàn sai, 20 là chuỗi thua liên tiếp xảy ra với Sunderland nhưng
+-- là trong 2 mùa: thua 15 trận cuối mùa 2002/2003 và xuống hạng, 3 năm sau mùa 2005/2006 lên hạng và thua liền 5 trận đầu mùa => tổng = 20
+

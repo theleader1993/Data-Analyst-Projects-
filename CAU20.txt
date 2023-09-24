@@ -1,0 +1,15 @@
+/* 20: Thua ít trận sân khách nhất trong một mùa*/
+use football;
+
+select s.season_end_year, s.club_name, ifnull(count(m1.away), 0) as num_defeat_inseason
+from 
+(select season_end_year, home as club_name 
+from matches
+group by season_end_year, home) as s
+left join matches as m1
+on s.season_end_year = m1.season_end_year and s.club_name = m1.away and m1.awaygoals < m1.homegoals
+group by s.season_end_year, s.club_name
+order by num_defeat_inseason
+-- KẾT LUẬN Đội thua ít trận sân khách nhất trong một mùa là Arsenal với 0 trận thua mùa giải 2001/2002 và 2003/2004, Man Utd mùa 2020/2021
+-- Bổ sung: mùa giải 2003/2004 Arsenal vô địch mà không để thua một trận nào, bây giờ kỷ lục đó vẫn là vô tiền khoáng hậu
+                    

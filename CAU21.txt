@@ -1,0 +1,45 @@
+/* 21: Chuỗi trận bất bại liên tiếp trên sân nhà (tính cả trường hợp từ mùa giải này kéo sang mùa giải khác)*/
+
+use football;
+select a5.club_name, (a5.end_time - a5.start_time + 1) as consecutive_unbeaten_home 
+from  
+	(select a4.club_name, a4.ranking,
+			MAX(case when a4.status_time = 'start' then a4.index_time end) as start_time, 
+			MAX(case when a4.status_time = 'end' then a4.index_time end) as end_time
+	from 
+		(select a3.Season_End_Year, a3.club_name, a3.index_time, a3.status_time,
+				dense_rank() over (partition by a3.club_name, a3.status_time order by a3.index_time) as ranking
+		from 
+			(select a2.*,
+				   (case when a2.previous_value = a2.index_time and a2.next_value - a2.index_time = 1 then 'start'
+						 when a2.index_time - a2.previous_value > 1 and a2.next_value - a2.index_time = 1 then 'start' 
+						 when a2.index_time = a2.next_value and a2.index_time - a2.previous_value = 1 then 'end'
+						 when a2.index_time - a2.previous_value = 1 and a2.next_value - a2.index_time > 1 then 'end' end) as status_time
+				   
+			from 
+				(select a1.Season_End_Year, a1.club_name,
+					   ifnull(lag(a1.index_time) over(partition by a1.club_name order by a1.index_time), a1.index_time) as previous_value,
+					   a1.index_time,
+					   ifnull(lead(a1.index_time) over(partition by a1.club_name order by a1.index_time), a1.index_time) as next_value
+				from 
+					(select a.Season_End_Year, a.club_name, a.index_time
+					from
+						(select s.club_name, m1.*,
+								dense_rank() over (partition  by s.club_name order by m1.date) as index_time
+						from 
+						(select distinct home as club_name from matches) as s
+						join matches as m1
+						on s.club_name = m1.home 
+						order by s.club_name, m1.Season_End_Year) as a
+					where a.homegoals > a.awaygoals or a.homegoals = a.awaygoals) as a1) as a2) as a3
+		where a3.status_time is not null) as a4
+	group by a4.club_name, a4.ranking) as a5
+order by consecutive_unbeaten_home desc
+-- Kết luận: Chuỗi trận bất bại liên tiếp trên sân nhà lớn nhất = 86 do Chelsea thiết lập !
+
+
+
+
+
+
+                    

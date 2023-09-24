@@ -1,0 +1,37 @@
+/* 14: Chuỗi thắng liên tiếp sân khách dài nhất (lưu ý có thể kéo dài qua nhiều mùa giải, chứ không chỉ tính trong một mùa giải)*/
+
+use football;
+with tbl_away_win as
+	(select a.season_end_year, a.club_name, a.date, a.index_date
+	from
+		(select s.club_name, m1.*,
+				dense_rank() over (partition by s.club_name order by m1.date) as index_date
+		from (select distinct home as club_name from matches) as s
+		join matches as m1
+		on s.club_name = m1.away) as a
+	where a.homegoals < a.awaygoals)
+
+select s.club_name, s.start_season, MIN(e.end_season) as end_season,
+	   s.start_date, MIN(e.end_date) as end_date,
+	  ( MIN(e.end_index) - s.start_index + 1 ) as num_win_away_consecutive
+from   
+	(select t1.club_name, t1.index_date as start_index, t1.date as start_date, t1.season_end_year as start_season
+	from tbl_away_win as t1
+	left join tbl_away_win as t2
+	on t1.club_name = t2.club_name and t2.index_date = t1.index_date - 1 
+	left join tbl_away_win as t3
+	on  t1.club_name = t3.club_name and t3.index_date = t1.index_date + 1 
+	where t2.index_date is null and t3.index_date is not null) as s
+join
+	(select t1.club_name, t1.index_date as end_index, t1.date as end_date, t1.season_end_year as end_season
+	from tbl_away_win as t1
+	left join tbl_away_win as t2
+	on t1.club_name = t2.club_name and t2.index_date = t1.index_date - 1 
+	left join tbl_away_win as t3
+	on t1.club_name = t3.club_name and t3.index_date = t1.index_date + 1 
+	where t2.index_date is not null and t3.index_date is null) as e
+on s.club_name = e.club_name and s.start_index < e.end_index
+group by s.club_name, s.start_index, s.start_date, s.start_season
+order by num_win_away_consecutive desc
+-- KẾT LUẬN: Chuỗi thắng liên tiếp sân khách dài nhất =  12 của Man city từ 19/12/2020 đến 14/05/2021 trong cùng mùa giải 2020/21
+-- Câu này trên wikipedia Việt Nam sai tiếp @_@, bài này của mình mới đúng nhé 

@@ -1,0 +1,40 @@
+/* 7: Thắng nhiều trận nhất và ít trận nhất trong một mùa */
+use football;
+select a1.season_end_year, a1.club_name, a1.num_match_win_season
+from
+	(select a.*, dense_rank() over (order by a.num_match_win_season desc) as xep_hang
+	from
+		(select g.season_end_year, g.club_name,
+			  SUM(case when g.club_name = m1.home and m1.homegoals > m1.awaygoals then 1
+					   when g.club_name = m1.away and m1.awaygoals > m1.homegoals then 1
+				  else 0 end) as num_match_win_season
+		from
+			(select m1.season_end_year, m1.home as club_name
+			from matches as m1
+			group by m1.season_end_year, m1.home ) as g
+		join matches as m1
+		on g.season_end_year = m1.season_end_year and ( g.club_name = m1.home or g.club_name = m1.away)
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+union all
+
+select a1.season_end_year, a1.club_name, a1.num_match_win_season
+from
+	(select a.*, dense_rank() over (order by a.num_match_win_season asc) as xep_hang
+	from
+		(select g.season_end_year, g.club_name,
+			  SUM(case when g.club_name = m1.home and m1.homegoals > m1.awaygoals then 1
+					   when g.club_name = m1.away and m1.awaygoals > m1.homegoals then 1
+				  else 0 end) as num_match_win_season
+		from
+			(select m1.season_end_year, m1.home as club_name
+			from matches as m1
+			group by m1.season_end_year, m1.home ) as g
+		join matches as m1
+		on g.season_end_year = m1.season_end_year and ( g.club_name = m1.home or g.club_name = m1.away)
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+-- KẾT LUẬN: thắng nhiều trận nhất trong một mùa là 32, 2 đội làm được điều này là Man City và Liverpool
+-- Thắng ít trận nhất trong một mùa là 1, tạo bởi Derby County

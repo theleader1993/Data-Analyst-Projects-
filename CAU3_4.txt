@@ -1,0 +1,53 @@
+/* 3 + 4: Khoảng cách giữa đội vô địch và á quân cao nhất/thấp nhất  */
+
+use football;
+/*------------------------- Bảng tạm ----------------------------------*/
+with club_tbl as 
+	(select a.*, dense_rank() over (partition by a.Season_End_Year order by a.total_score desc, a.total_hieu_so desc) as xep_hang
+	from
+	(select c.club_name, m1.Season_End_Year,
+		   sum(case when c.club_name = m1.home and m1.homegoals > m1.awaygoals then 3
+				  when c.club_name = m1.home and m1.homegoals < m1.awaygoals then 0
+				  when c.club_name = m1.away and m1.homegoals > m1.awaygoals then 0
+				  when c.club_name = m1.away and m1.homegoals < m1.awaygoals then 3
+			else 1 end) as total_score,
+			sum(case when c.club_name = m1.home then m1.homegoals - m1.awaygoals
+					 when c.club_name = m1.away then m1.awaygoals - m1.homegoals end ) as total_hieu_so
+	from (select distinct home as club_name from matches) as c
+	join matches as m1
+	on c.club_name = m1.home or c.club_name = m1.away 
+	group by c.club_name, m1.Season_End_Year) as a)
+/*------------------------- Kêt thúc bảng tạm -------------------------*/
+(select  s.season_end_year,
+		MAX(case when c.xep_hang = 1 then c.club_name end ) as championship,
+        MAX(case when c.xep_hang = 1 then c.total_score end) as championship_score,
+        MAX(case when c.xep_hang = 2 then c.club_name end ) as second_best,
+        MAX(case when c.xep_hang = 2 then c.total_score end) as second_best_score,
+        SUM(case when c.xep_hang = 1 then c.total_score
+			  when c.xep_hang = 2 then c.total_score * (-1) end ) as khoang_cach_diem
+from (select distinct season_end_year from matches ) as s
+join club_tbl as c
+on s.season_end_year = c.season_end_year
+group by s.season_end_year
+order by khoang_cach_diem desc
+limit 1)
+
+union all
+
+(select  s.season_end_year,
+		MAX(case when c.xep_hang = 1 then c.club_name end ) as championship,
+        MAX(case when c.xep_hang = 1 then c.total_score end) as championship_score,
+        MAX(case when c.xep_hang = 2 then c.club_name end ) as second_best,
+        MAX(case when c.xep_hang = 2 then c.total_score end) as second_best_score,
+        SUM(case when c.xep_hang = 1 then c.total_score
+			  when c.xep_hang = 2 then c.total_score * (-1) end ) as khoang_cach_diem
+from (select distinct season_end_year from matches ) as s
+join club_tbl as c
+on s.season_end_year = c.season_end_year
+group by s.season_end_year
+order by khoang_cach_diem asc
+limit 1)
+-- KẾT LUẬN: khoảng cách cao nhất giữa 2 đội về nhất và về nhì trong một mùa giải là 19 điểm, 
+-- thấp nhất là 0 điểm ( khi bằng điểm sẽ xét tới chỉ số hiệu số bàn thắng bại )
+-- Ngoài ra trong mysql có thể export output ra file csv như sau
+

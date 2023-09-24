@@ -1,0 +1,25 @@
+/* CÂU 1: Tìm đội bóng giành nhiều chức vô địch nhất giải premier league */  
+use football;
+select a1.club_name, count(*) as num_champion, group_concat(a1.Season_End_Year) as year_winner
+from
+	(select a.*, dense_rank() over (partition by a.Season_End_Year order by a.total_score desc, a.total_hieu_so desc) as xep_hang
+	   from
+		(select c.club_name, m1.Season_End_Year,
+			   sum(case when c.club_name = m1.home and m1.homegoals > m1.awaygoals then 3
+					  when c.club_name = m1.home and m1.homegoals < m1.awaygoals then 0
+					  when c.club_name = m1.away and m1.homegoals > m1.awaygoals then 0
+					  when c.club_name = m1.away and m1.homegoals < m1.awaygoals then 3
+				else 1 end) as total_score,
+				sum(case when c.club_name = m1.home then m1.homegoals - m1.awaygoals
+						 when c.club_name = m1.away then m1.awaygoals - m1.homegoals end ) as total_hieu_so
+		from (select distinct home as club_name from matches) as c
+		join matches as m1
+		on c.club_name = m1.home or c.club_name = m1.away 
+		group by c.club_name, m1.Season_End_Year) as a) as a1
+where a1.xep_hang = 1
+group by a1.club_name
+order by count(*) desc
+-- KẾT LUẬN: Man utd là đội vô địch giải NHA nhiều nhất với 13 lần ! 
+
+
+

@@ -1,0 +1,12 @@
+/* 17: Thua nhiều nhất */
+use football;
+select s.club_name, count(*) as num_match_lose
+from (select distinct home as club_name from matches) as s
+join matches as m1
+on s.club_name = m1.home or s.club_name = m1.away
+where (s.club_name = m1.home and m1.homegoals < m1.awaygoals) or
+	  (s.club_name = m1.away and m1.awaygoals < m1.homegoals)
+group by s.club_name
+order by num_match_lose desc
+-- Kết luận: Everton là đội thua nhiều nhất trong toàn bộ lịch sử giải đấu với 432 trận thua
+-- Nhưng chưa tính số trận thua tại mùa giải hiện tại 2023/2024 đang khởi tranh

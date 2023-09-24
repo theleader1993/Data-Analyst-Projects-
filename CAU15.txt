@@ -1,0 +1,13 @@
+/* 15:  Thua ít trận nhất trong một mùa */
+use football;
+select s.season_end_year, s.club_name, ifnull(count(m1.season_end_year), 0) as num_lose_season
+from 
+	(select m.season_end_year, m.home as club_name
+    from matches as m
+    group by m.season_end_year, m.home) as s
+left join matches as m1
+on s.season_end_year = m1.season_end_year and 
+((s.club_name = m1.home and m1.homegoals < m1.awaygoals) or (s.club_name = m1.away and m1.homegoals > m1.awaygoals))
+group by s.season_end_year, s.club_name
+order by num_lose_season 
+-- KẾT LUẬN: Thua ít trận nhất trong một mùa = 0, đạt được bởi Arsenal vào mùa giải 2003-2004 

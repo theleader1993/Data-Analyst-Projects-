@@ -1,0 +1,53 @@
+/*2:  Số năm vô địch liên tiếp nhiều nhất*/
+use football;
+with champion_tbl as
+	(select a1.club_name, a1.Season_End_Year as year_winner
+	from
+		(select a.*, dense_rank() over (partition by a.Season_End_Year order by a.total_score desc, a.total_hieu_so desc) as xep_hang
+		   from
+			(select c.club_name, m1.Season_End_Year,
+				   sum(case when c.club_name = m1.home and m1.homegoals > m1.awaygoals then 3
+						  when c.club_name = m1.home and m1.homegoals < m1.awaygoals then 0
+						  when c.club_name = m1.away and m1.homegoals > m1.awaygoals then 0
+						  when c.club_name = m1.away and m1.homegoals < m1.awaygoals then 3
+					else 1 end) as total_score,
+					sum(case when c.club_name = m1.home then m1.homegoals - m1.awaygoals
+							 when c.club_name = m1.away then m1.awaygoals - m1.homegoals end ) as total_hieu_so
+			from (select distinct home as club_name from matches) as c
+			join matches as m1
+			on c.club_name = m1.home or c.club_name = m1.away 
+			group by c.club_name, m1.Season_End_Year) as a) as a1
+	where a1.xep_hang = 1)
+
+
+select s.club_name, s.start_year, min(e.end_year) as end_year,
+	   ( min(e.end_year) - s.start_year + 1 ) as num_year_consecutive
+from
+	(select c1.club_name, c1.year_winner as start_year
+	from champion_tbl as c1
+	left join champion_tbl as c2
+	on c1.club_name = c2.club_name and c2.year_winner = c1.year_winner - 1
+	left join champion_tbl as c3
+	on c1.club_name = c3.club_name and c3.year_winner = c1.year_winner + 1
+	where c2.year_winner is null and c3.year_winner is not null) as s
+join
+	(select c1.club_name, c1.year_winner as end_year
+	from champion_tbl as c1
+	left join champion_tbl as c2
+	on c1.club_name = c2.club_name and c2.year_winner = c1.year_winner - 1
+	left join champion_tbl as c3
+	on c1.club_name = c3.club_name and c3.year_winner = c1.year_winner + 1
+	where c2.year_winner is not null and c3.year_winner is null) as e
+on e.club_name = s.club_name and s.start_year < e.end_year
+group by s.club_name, s.start_year
+order by ( min(e.end_year) - s.start_year + 1 ) desc
+
+/* KẾT LUẬN : Số năm vô địch liên tiếp nhiều nhất = 3 , 2 đội bóng đạt được thành tích này là Man Utd và Man city
+-- Nhưng Man utd làm được 2 lần: mùa giải 1998/1999 -> 2000/2001 và 2006/2007 -> 2008/2009
+ Man city vô địch liên tiếp 3 năm 1 lần: 2020/2021 -> 2022/2023  */
+
+
+
+
+
+

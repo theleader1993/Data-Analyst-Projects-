@@ -1,0 +1,39 @@
+/* Thắng nhiều trận/ít trận sân nhà nhất trong một mùa */ 
+
+
+use football;
+select a1.season_end_year, a1.club_name, a1.num_win_home_season
+from
+	(select a.*, dense_rank() over (order by a.num_win_home_season desc) as xep_hang
+	from
+		(select g.season_end_year, g.club_name, count(*) as num_win_home_season
+		from 
+			(select m.season_end_year, m.home as club_name
+			from matches as m
+			group by m.season_end_year, m.home) as g
+		join matches as m1
+		on g.season_end_year = m1.season_end_year and g.club_name = m1.home and m1.homegoals > m1.awaygoals
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+union all
+
+select a1.season_end_year, a1.club_name, a1.num_win_home_season
+from
+	(select a.*, dense_rank() over (order by a.num_win_home_season asc) as xep_hang
+	from
+		(select g.season_end_year, g.club_name, count(*) as num_win_home_season
+		from 
+			(select m.season_end_year, m.home as club_name
+			from matches as m
+			group by m.season_end_year, m.home) as g
+		join matches as m1
+		on g.season_end_year = m1.season_end_year and g.club_name = m1.home and m1.homegoals > m1.awaygoals
+		group by g.season_end_year, g.club_name) as a) as a1
+where a1.xep_hang = 1
+
+-- KẾT LUẬN: Thắng nhiều nhất trên sân nhà là 18 trận (tối đa có 19 trận trên sân nhà ). 4 đội làm được điều này: Chelsea, Liverpool, Man xanh, Man đỏ
+-- Thắng ít trên nhất trên sân nhà là 1, tạo ra bởi 2 đội Sunderland và Derby County
+
+
+

@@ -1,0 +1,36 @@
+/* Giành chức vô địch không để thua trận đấu nào */
+use football;
+
+
+select tbl_championship.*
+from
+	(select a1.season_end_year, a1.club_name
+	from 
+		(select a.*, dense_rank() over (partition by a.season_end_year order by a.total_score desc, a.total_hieu_so desc, a.club_name) as xep_hang
+		from 
+			(select  m1.season_end_year, s.club_name,
+				   SUM(case when s.club_name = m1.home and m1.homegoals > m1.awaygoals then 3
+						 when s.club_name = m1.home and m1.homegoals < m1.awaygoals then 0
+						 when s.club_name = m1.away and m1.homegoals > m1.awaygoals then 0
+						 when s.club_name = m1.away and m1.homegoals < m1.awaygoals then 3
+					else 1 end) as total_score,
+					SUM(case when s.club_name = m1.home then m1.homegoals - m1.awaygoals
+							 when s.club_name = m1.away then m1.awaygoals - m1.homegoals end) as total_hieu_so
+			from (select distinct home as club_name from matches) as s
+			join matches as m1
+			on s.club_name = m1.home or s.club_name = m1.away 
+			group by s.club_name, m1.season_end_year) as a) as a1
+	where a1.xep_hang = 1) as tbl_championship
+join
+	(select g.season_end_year, g.club_name
+	from
+		(select m.season_end_year, m.home as club_name
+		from matches as m
+		group by m.season_end_year, m.home) as g
+	left join matches as m1
+	on g.season_end_year = m1.season_end_year and
+	(
+		(g.club_name = m1.home and m1.homegoals < m1.awaygoals) or (g.club_name = m1.away and m1.homegoals > m1.awaygoals)
+	)
+	where  m1.season_end_year is null) as not_lose_in_season
+on tbl_championship.season_end_year = not_lose_in_season.season_end_year and tbl_championship.club_name = not_lose_in_season.club_name
